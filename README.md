@@ -1024,6 +1024,7 @@ public array filters()
 public function filters()
 {
     return [
+        ['title', 'strip_tags'],        // Perform `strip_tags()` for title input data only
         [['title', 'name'], 'trim'],    // Perform `trim()` for title & name input data
         [['title'], 'static::method'],  // Perform `public static function method($value)` in this model
         [['name'], function($value) {   // Perform defined anonymous function. 'value' => '[Filtered]value'
