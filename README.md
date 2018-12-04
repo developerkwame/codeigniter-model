@@ -982,6 +982,7 @@ public function rules()
         [
             'field' => 'title',
             'rules' => 'required|min_length[3]',
+            'label' => $this->lang->line('title'),
             'errors' => [
                 'required' => $this->lang->line('required'),
                 'min_length' => $this->lang->line('min_length'),
@@ -994,6 +995,7 @@ public function rules()
 In above case, the language file could be `application/language/en-US/error_messages_lang.php`:
 
 ```php
+$lang['required'] = 'Title';
 $lang['required'] = '`%s` is required';
 $lang['min_length'] = '`%s` requires at least %d letters';
 ```
