@@ -1027,6 +1027,7 @@ public function filters()
         [['name'], function($value) {   // Perform defined anonymous function. 'value' => '[Filtered]value'
             return "[Filtered]" . $value;
         }],
+        [['content'], [$this->security, 'xss_clean']], // Perform CodeIgniter XSS Filtering for content input data
     ];
 }
 ```
