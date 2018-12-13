@@ -931,7 +931,7 @@ public array getErrors()
 
 ### Declaring Rules
 
-To make `validate()` really work, you should declare validation rules for the attributes you plan to validate. This should be done by overriding the `rules()` method with returning [CodeIgniter Rules] (https://www.codeigniter.com/userguide3/libraries/form_validation.html#setting-rules-using-an-array).
+To make `validate()` really work, you should declare validation rules for the attributes you plan to validate. This should be done by overriding the `rules()` method with returning [CodeIgniter Rules](https://www.codeigniter.com/userguide3/libraries/form_validation.html#setting-rules-using-an-array).
 
 #### `rules()`
 
