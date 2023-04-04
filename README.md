@@ -1,6 +1,6 @@
 <p align="center">
-    <a href="https://codeigniter.com/" target="_blank">
-        <img src="https://codeigniter.com/assets/images/ci-logo-big.png" height="100px">
+    <a href="https://codeigniter.com/userguide3/" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/zh/7/7c/CodeIgniter.png" height="">
     </a>
     <h1 align="center">CodeIgniter Model</h1>
     <br>
@@ -16,7 +16,7 @@ This ORM Model extension is collected into [yidas/codeigniter-pack](https://gith
 FEATURES
 --------
 
-- ***ORM** Model with **Elegant patterns** as Laravel Eloquent ORM & Yii2 Active Record*
+- ***[ORM](#active-record-orm)** Model with **Elegant patterns** as Laravel Eloquent ORM & Yii2 Active Record*
 
 - ***[CodeIgniter Query Builder](#find)** integration*
 
@@ -38,6 +38,7 @@ OUTLINE
   - [Primary Keys](#primary-keys)
   - [Timestamps](#timestamps)
   - [Database Connection](#database-connection)
+  - [Other settings](#other-settings)
 - [Basic Usage](#basic-usage)
   - [Methods](#methods)
     - [find()](#find)
@@ -58,10 +59,15 @@ OUTLINE
   - [Updates](#updates)
   - [Deletes](#deletes)
   - [Accessing Data](#accessing-data)
+  - [Relationships](#relationships)
   - [Methods](#methods-1)
     - [findone()](#findone)
     - [findAll()](#findall)
     - [save()](#save)
+    - [beforeSave()](#beforesave)
+    - [afterSave()](#afterave)
+    - [hasOne()](#hasone)
+    - [hasMany()](#hasmany)
     - [toArray()](#toarray)
 - [Soft Deleted](#soft-deleted)
   - [Configuration](#configuration-1)
@@ -110,9 +116,11 @@ if ($post) {
 }
 ```
 
+> The pattern is similar to [Yii2 Active Record](https://www.yiiframework.com/doc/guide/2.0/en/db-active-record#active-record) and [Laravel Eloquent](https://laravel.com/docs/5.8/eloquent#inserting-and-updating-models)
+
 ### Find with Query Builder
 
-The Model would defined database coonnections and table itself.
+Start to use CodeIgniter Query Builder from `find()` method, the Model will automatically load its own database connections and data tables.
 
 ```php
 $records = $this->Posts_model->find()
@@ -331,6 +339,17 @@ class My_model extends yidas\Model
 
 > More Database Connection settings: [Read & Write Connections](#read--write-connections)
 
+
+### Other settings
+
+```php
+class My_model extends yidas\Model
+{
+    // Enable ORM property check for write
+    protected $propertyCheck = true;
+}
+```
+
 ---
 
 BASIC USAGE
@@ -469,6 +488,13 @@ $result = $this->Model->update(['status'=>'off'], 123)
 // Find conditions first then call again
 $this->Model->find()->where('id', 123);
 $result = $this->Model->update(['status'=>'off']);
+```
+
+```php
+// Counter set usage equal to `UPDATE mytable SET count = count+1 WHERE id = 123`
+$this->Model->getDB()->set('count','count + 1', FALSE);
+$this->Model->find()->where('id', 123);
+$result = $this->Model->update([]);
 ```
 
 > Notice: You need to call `update` from Model but not from CI-DB builder chain, the wrong sample code: 
@@ -636,6 +662,43 @@ $title = $post->title;
 $subtitle = $post['subtitle'];
 ```
 
+### Relationships
+
+Database tables are often related to one another. For example, a blog post may have many comments, or an order could be related to the user who placed it. This library makes managing and working with these relationships easy, and supports different types of relationships:
+
+- [One To One](#hasone)
+- [One To Many](#hasmany)
+
+To work with relational data using Active Record, you first need to declare relations in models. The task is as simple as declaring a `relation method` for every interested relation, like the following,
+
+```php
+class CustomersModel extends yidas\Model
+{
+    // ...
+
+    public function orders()
+    {
+        return $this->hasMany('OrdersModel', ['customer_id' => 'id']);
+    }
+}
+```
+
+Once the relationship is defined, we may retrieve the related record using dynamic properties. Dynamic properties allow you to access relationship methods as if they were properties defined on the model:
+
+```php
+$orders = $this->CustomersModel->findOne(1)->orders;
+```
+
+> The dynamic properties' names are same as methods' names, like [Laravel Eloquent](https://laravel.com/docs/5.7/eloquent-relationships)
+
+For **Querying Relations**, You may query the `orders` relationship and add additional constraints with CI Query Builder to the relationship like so:
+
+```php
+$customer = $this->CustomersModel->findOne(1)
+
+$orders = $customer->orders()->where('active', 1)->get()->result_array();
+```
+
 ### Methods
 
 #### `findOne()`
@@ -656,7 +719,7 @@ $activeRecord = $this->Model->findOne(['type' => 'A', 'status' => 1]);
 
 // Query builder ORM usage
 $this->Model->find()->where('id', 10);
-$this->Model->findOne();
+$activeRecord = $this->Model->findOne();
 ```
 
 #### `findAll()`
@@ -664,7 +727,7 @@ $this->Model->findOne();
 Returns a list of active record models that match the specified primary key value(s) or a set of column values.
 
 ```php
-public array findAll(array $condition=[])
+public array findAll(array $condition=[], integer|array $limit=null)
 ```
 
 *Example:*
@@ -673,11 +736,25 @@ public array findAll(array $condition=[])
 $activeRecords = $this->Model->findAll([10, 11, 12]);
 
 // Find the active recordd whose type is 'A' and whose status is 1
-$activeRecord = $this->Model->findAll(['type' => 'A', 'status' => 1]);
+$activeRecords = $this->Model->findAll(['type' => 'A', 'status' => 1]);
 
 // Query builder ORM usage
 $this->Model->find()->where_in('id', [10, 11, 12]);
-$this->Model->findAll();
+$activeRecords = $this->Model->findAll();
+
+// Print all properties for each active record from array
+foreach ($activeRecords as $activeRecord) {
+    print_r($activeRecord->toArray());
+}
+```
+
+*Example of limit:*
+```php
+// LIMIT 10
+$activeRecords = $this->Model->findAll([], 10);
+
+// OFFSET 50, LIMIT 10
+$activeRecords = $this->Model->findAll([], [50, 10]);
 ```
 
 #### `save()`
@@ -685,7 +762,102 @@ $this->Model->findAll();
 Active Record (ORM) save for insert or update
 
 ```php
-public boolean save($runValidation=true)
+public boolean save(boolean $runValidation=true)
+```
+
+#### `beforeSave()`
+
+This method is called at the beginning of inserting or updating a active record
+
+
+```php
+public boolean beforeSave(boolean $insert)
+```
+
+*Example:*
+```
+public function beforeSave($insert)
+{
+    if (!parent::beforeSave($insert)) {
+        return false;
+    }
+
+    // ...custom code here...
+    return true;
+}
+```
+
+#### `afterSave()`
+
+This method is called at the end of inserting or updating a active record
+
+
+```php
+public boolean beforeSave(boolean $insert, array $changedAttributes)
+```
+
+#### `hasOne()`
+
+Declares a has-one relation
+
+
+```php
+public CI_DB_query_builder hasOne(string $modelName, string $foreignKey=null, string $localKey=null)
+```
+
+*Example:*
+```php
+class OrdersModel extends yidas\Model
+{
+    // ...
+    
+    public function customer()
+    {
+        return $this->hasOne('CustomersModel', 'id', 'customer_id');
+    }
+}
+```
+*Accessing Relational Data:*
+```php
+$this->load->model('OrdersModel');
+// SELECT * FROM `orders` WHERE `id` = 321
+$order = $this->OrdersModel->findOne(321);
+
+// SELECT * FROM `customers` WHERE `customer_id` = 321
+// $customer is a Customers active record
+$customer = $order->customer;
+```
+
+#### `hasMany()`
+
+Declares a has-many relation
+
+
+```php
+public CI_DB_query_builder hasMany(string $modelName, string $foreignKey=null, string $localKey=null)
+```
+
+*Example:*
+```php
+class CustomersModel extends yidas\Model
+{
+    // ...
+    
+    public function orders()
+    {
+        return $this->hasMany('OrdersModel', 'customer_id', 'id');
+    }
+}
+```
+*Accessing Relational Data:*
+```php
+$this->load->model('CustomersModel');
+// SELECT * FROM `customers` WHERE `id` = 123
+$customer = $this->CustomersModel->findOne(123);
+
+// SELECT * FROM `order` WHERE `customer_id` = 123
+// $orders is an array of Orders active records
+$orders = $customer->orders;
 ```
 
 #### `toArray()`
